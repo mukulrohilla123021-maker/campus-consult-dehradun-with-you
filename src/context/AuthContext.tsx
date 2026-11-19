@@ -116,6 +116,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     let closedIntentionally = false;
     let reconnectTimer: number | undefined;
+    let openedOnce = false;
+    let consecutiveFailures = 0;
 
     const connect = () => {
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -123,8 +125,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const wsUrl = token
         ? `${protocol}//${window.location.host}/ws?token=${encodeURIComponent(token)}`
         : `${protocol}//${window.location.host}/ws`;
-      const ws = new WebSocket(wsUrl);
+      let ws: WebSocket;
+      try {
+        ws = new WebSocket(wsUrl);
+      } catch {
+        return;
+      }
       wsRef.current = ws;
+
+      ws.onopen = () => {
+        openedOnce = true;
+        consecutiveFailures = 0;
+      };
 
       ws.onmessage = (evt) => {
         try {
@@ -142,9 +154,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       };
 
       ws.onclose = () => {
-        if (!closedIntentionally) {
-          reconnectTimer = window.setTimeout(connect, 3000);
+        if (closedIntentionally) return;
+        consecutiveFailures += 1;
+        // Stop retrying if server (e.g. Vercel serverless) never accepts WebSocket handshakes
+        if (!openedOnce && consecutiveFailures >= 2) {
+          return;
         }
+        reconnectTimer = window.setTimeout(connect, Math.min(30000, 3000 * consecutiveFailures));
       };
     };
 

@@ -2,34 +2,11 @@ import http from 'node:http';
 import path from 'node:path';
 import fs from 'node:fs';
 import express from 'express';
-import dotenv from 'dotenv';
-import { initDatabase } from './server/db.ts';
+import { createExpressApp } from './server/app.ts';
 import { setupWebSockets } from './server/realtime.ts';
-import { registerAuthAndPublicRoutes } from './server/routesAuthAndPublic.ts';
-import { registerWorkflowRoutes } from './server/routesWorkflows.ts';
-import { registerAdminAndFinanceRoutes } from './server/routesAdminAndFinance.ts';
-
-dotenv.config();
 
 async function startServer() {
-  initDatabase();
-
-  const app = express();
-  app.use(express.json({ limit: '8mb' }));
-
-  app.get('/api/health', (_req, res) => {
-    res.json({ ok: true, service: 'campus-consult-dehradun', port: 3000 });
-  });
-
-  registerAuthAndPublicRoutes(app);
-  registerWorkflowRoutes(app);
-  registerAdminAndFinanceRoutes(app);
-
-  // API 404 handler so /api/* never falls through to SPA HTML
-  app.use('/api', (_req, res) => {
-    res.status(404).json({ error: 'API endpoint not found.' });
-  });
-
+  const app = createExpressApp();
   const isProd = process.env.NODE_ENV === 'production';
 
   if (!isProd) {

@@ -3,15 +3,10 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { hashPassword } from './auth.ts';
+import { WRITABLE_DATA_DIR, WRITABLE_UPLOAD_DIR } from './storagePaths.ts';
 
-const DATA_DIR = path.resolve(process.cwd(), 'data');
-const UPLOAD_DIR = path.resolve(process.cwd(), 'storage', 'uploads');
-
-fs.mkdirSync(DATA_DIR, { recursive: true });
-fs.mkdirSync(UPLOAD_DIR, { recursive: true });
-
-export const DB_PATH = path.join(DATA_DIR, 'campus_consult.db');
-export const STORAGE_UPLOAD_DIR = UPLOAD_DIR;
+export const DB_PATH = path.join(WRITABLE_DATA_DIR, 'campus_consult.db');
+export const STORAGE_UPLOAD_DIR = WRITABLE_UPLOAD_DIR;
 
 export const db = new DatabaseSync(DB_PATH);
 
@@ -25,7 +20,11 @@ export function ensureColumn(tableName: string, columnName: string, columnDefini
   }
 }
 
+let dbInitialized = false;
+
 export function initDatabase(): void {
+  if (dbInitialized) return;
+  dbInitialized = true;
   db.exec(`
     CREATE TABLE IF NOT EXISTS users (
       id TEXT PRIMARY KEY,

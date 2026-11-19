@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import type { Request, Response, NextFunction } from 'express';
+import { WRITABLE_DATA_DIR } from './storagePaths.ts';
 
 export type UserRole = 'customer' | 'consultant' | 'admin' | 'super_admin';
 
@@ -23,15 +24,18 @@ function getSessionSecret(): string {
     cachedSecret = process.env.SESSION_SECRET;
     return cachedSecret;
   }
-  const dataDir = path.resolve(process.cwd(), 'data');
-  fs.mkdirSync(dataDir, { recursive: true });
-  const secretPath = path.join(dataDir, '.session_secret');
+  fs.mkdirSync(WRITABLE_DATA_DIR, { recursive: true });
+  const secretPath = path.join(WRITABLE_DATA_DIR, '.session_secret');
   if (fs.existsSync(secretPath)) {
     cachedSecret = fs.readFileSync(secretPath, 'utf8').trim();
     return cachedSecret;
   }
   const generated = crypto.randomBytes(32).toString('hex');
-  fs.writeFileSync(secretPath, generated, { mode: 0o600 });
+  try {
+    fs.writeFileSync(secretPath, generated, { mode: 0o600 });
+  } catch {
+    // Fallback to in-memory generated secret if filesystem write fails
+  }
   cachedSecret = generated;
   return cachedSecret;
 }
