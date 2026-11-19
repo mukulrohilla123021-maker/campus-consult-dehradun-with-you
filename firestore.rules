@@ -1,0 +1,173 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global Safety Net (Default Deny)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerifiedUser() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isBootstrapSuperAdmin() {
+      return isVerifiedUser() && request.auth.token.email == 'mukul.rohilla123021@gmail.com';
+    }
+
+    function isAdmin() {
+      return isBootstrapSuperAdmin() ||
+        (isVerifiedUser() && exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
+    }
+
+    function isValidServiceCategory(data) {
+      return data.keys().hasAll([
+          'id', 'name', 'slug', 'description', 'sortOrder',
+          'status', 'isActive', 'isCore', 'imageUrl', 'createdAt', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'id', 'name', 'slug', 'description', 'sortOrder',
+          'status', 'isActive', 'isCore', 'imageUrl', 'createdAt', 'updatedAt'
+        ]) &&
+        isValidId(data.id) &&
+        data.name is string && data.name.size() >= 2 && data.name.size() <= 120 &&
+        data.slug is string && data.slug.size() >= 2 && data.slug.size() <= 120 && data.slug.matches('^[a-z0-9\\-]+$') &&
+        data.description is string && data.description.size() >= 5 && data.description.size() <= 500 &&
+        data.sortOrder is int && data.sortOrder >= 1 && data.sortOrder <= 999 &&
+        data.status in ['active', 'inactive'] &&
+        data.isActive is bool &&
+        data.isCore is bool &&
+        data.imageUrl is string && data.imageUrl.size() <= 450000 &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidServiceItem(data) {
+      return data.keys().hasAll([
+          'id', 'categoryId', 'categoryName', 'categorySlug', 'title',
+          'shortDescription', 'description', 'priceInr', 'packageName',
+          'deliverables', 'estimatedDays', 'requirementsPrompt', 'revisionPolicy',
+          'requiredSkills', 'imageUrl', 'categoryImageUrl', 'isStartingPrice',
+          'status', 'isActive', 'createdAt', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'id', 'categoryId', 'categoryName', 'categorySlug', 'title',
+          'shortDescription', 'description', 'priceInr', 'packageName',
+          'deliverables', 'estimatedDays', 'requirementsPrompt', 'revisionPolicy',
+          'requiredSkills', 'imageUrl', 'categoryImageUrl', 'isStartingPrice',
+          'status', 'isActive', 'createdAt', 'updatedAt'
+        ]) &&
+        isValidId(data.id) &&
+        isValidId(data.categoryId) &&
+        data.categoryName is string && data.categoryName.size() >= 2 && data.categoryName.size() <= 120 &&
+        data.categorySlug is string && data.categorySlug.size() >= 2 && data.categorySlug.size() <= 120 && data.categorySlug.matches('^[a-z0-9\\-]+$') &&
+        data.title is string && data.title.size() >= 2 && data.title.size() <= 160 &&
+        data.shortDescription is string && data.shortDescription.size() >= 2 && data.shortDescription.size() <= 280 &&
+        data.description is string && data.description.size() >= 5 && data.description.size() <= 2000 &&
+        data.priceInr is number && data.priceInr >= 100 && data.priceInr <= 1000000 &&
+        data.packageName is string && data.packageName.size() >= 2 && data.packageName.size() <= 80 &&
+        data.deliverables is string && data.deliverables.size() >= 3 && data.deliverables.size() <= 600 &&
+        data.estimatedDays is int && data.estimatedDays >= 1 && data.estimatedDays <= 365 &&
+        data.requirementsPrompt is string && data.requirementsPrompt.size() <= 500 &&
+        data.revisionPolicy is string && data.revisionPolicy.size() <= 200 &&
+        data.requiredSkills is string && data.requiredSkills.size() <= 250 &&
+        data.imageUrl is string && data.imageUrl.size() <= 450000 &&
+        data.categoryImageUrl is string && data.categoryImageUrl.size() <= 450000 &&
+        data.isStartingPrice is bool &&
+        data.status in ['active', 'inactive'] &&
+        data.isActive is bool &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidAdminUser(data) {
+      return data.keys().hasAll(['uid', 'email', 'role', 'createdAt']) &&
+        data.keys().hasOnly(['uid', 'email', 'role', 'createdAt']) &&
+        isValidId(data.uid) &&
+        data.email is string && data.email.size() >= 3 && data.email.size() <= 200 &&
+        data.role in ['admin', 'super_admin'] &&
+        data.createdAt is timestamp;
+    }
+
+    match /service_categories/{categoryId} {
+      allow get: if isValidId(categoryId) && (existing().status == 'active' || isAdmin());
+      allow list: if resource.data.status == 'active' || isBootstrapSuperAdmin();
+      allow create: if isAdmin() &&
+        isValidId(categoryId) &&
+        isValidServiceCategory(incoming()) &&
+        incoming().id == categoryId &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time;
+      allow update: if isAdmin() &&
+        isValidId(categoryId) &&
+        isValidServiceCategory(incoming()) &&
+        incoming().id == existing().id &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        incoming().diff(existing()).affectedKeys().hasOnly([
+          'name', 'slug', 'description', 'sortOrder',
+          'status', 'isActive', 'isCore', 'imageUrl', 'updatedAt'
+        ]);
+      allow delete: if isAdmin() && isValidId(categoryId);
+    }
+
+    match /services/{serviceId} {
+      allow get: if isValidId(serviceId) && (existing().status == 'active' || isAdmin());
+      allow list: if resource.data.status == 'active' || isBootstrapSuperAdmin();
+      allow create: if isAdmin() &&
+        isValidId(serviceId) &&
+        isValidServiceItem(incoming()) &&
+        incoming().id == serviceId &&
+        exists(/databases/$(database)/documents/service_categories/$(incoming().categoryId)) &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time;
+      allow update: if isAdmin() &&
+        isValidId(serviceId) &&
+        isValidServiceItem(incoming()) &&
+        incoming().id == existing().id &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        exists(/databases/$(database)/documents/service_categories/$(incoming().categoryId)) &&
+        incoming().diff(existing()).affectedKeys().hasOnly([
+          'categoryId', 'categoryName', 'categorySlug', 'title',
+          'shortDescription', 'description', 'priceInr', 'packageName',
+          'deliverables', 'estimatedDays', 'requirementsPrompt', 'revisionPolicy',
+          'requiredSkills', 'imageUrl', 'categoryImageUrl', 'isStartingPrice',
+          'status', 'isActive', 'updatedAt'
+        ]);
+      allow delete: if isAdmin() && isValidId(serviceId);
+    }
+
+    match /admins/{adminId} {
+      allow get: if isValidId(adminId) && ((isVerifiedUser() && request.auth.uid == adminId) || isBootstrapSuperAdmin());
+      allow list: if isBootstrapSuperAdmin();
+      allow create: if isBootstrapSuperAdmin() &&
+        isValidId(adminId) &&
+        isValidAdminUser(incoming()) &&
+        incoming().uid == adminId &&
+        incoming().createdAt == request.time;
+      allow update: if false;
+      allow delete: if isBootstrapSuperAdmin() && isValidId(adminId) && adminId != request.auth.uid;
+    }
+
+    match /test/{docId} {
+      allow get: if docId == 'connection';
+    }
+  }
+}

@@ -1,0 +1,240 @@
+{
+  "entities": {
+    "ServiceCategory": {
+      "title": "ServiceCategory",
+      "description": "Structured consulting and digital support category in Campus Consult Dehradun marketplace.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 120
+        },
+        "slug": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 120,
+          "pattern": "^[a-z0-9\\-]+$"
+        },
+        "description": {
+          "type": "string",
+          "minLength": 5,
+          "maxLength": 500
+        },
+        "sortOrder": {
+          "type": "integer"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["active", "inactive"]
+        },
+        "isActive": {
+          "type": "boolean"
+        },
+        "isCore": {
+          "type": "boolean"
+        },
+        "imageUrl": {
+          "type": "string",
+          "maxLength": 450000
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "slug",
+        "description",
+        "sortOrder",
+        "status",
+        "isActive",
+        "isCore",
+        "imageUrl",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "ServiceItem": {
+      "title": "ServiceItem",
+      "description": "Fixed-price micro-consulting service package linked to an active category.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "categoryId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "categoryName": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 120
+        },
+        "categorySlug": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 120,
+          "pattern": "^[a-z0-9\\-]+$"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 160
+        },
+        "shortDescription": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 280
+        },
+        "description": {
+          "type": "string",
+          "minLength": 5,
+          "maxLength": 2000
+        },
+        "priceInr": {
+          "type": "number"
+        },
+        "packageName": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 80
+        },
+        "deliverables": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 600
+        },
+        "estimatedDays": {
+          "type": "integer"
+        },
+        "requirementsPrompt": {
+          "type": "string",
+          "maxLength": 500
+        },
+        "revisionPolicy": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "requiredSkills": {
+          "type": "string",
+          "maxLength": 250
+        },
+        "imageUrl": {
+          "type": "string",
+          "maxLength": 450000
+        },
+        "categoryImageUrl": {
+          "type": "string",
+          "maxLength": 450000
+        },
+        "isStartingPrice": {
+          "type": "boolean"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["active", "inactive"]
+        },
+        "isActive": {
+          "type": "boolean"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "categoryId",
+        "categoryName",
+        "categorySlug",
+        "title",
+        "shortDescription",
+        "description",
+        "priceInr",
+        "packageName",
+        "deliverables",
+        "estimatedDays",
+        "requirementsPrompt",
+        "revisionPolicy",
+        "requiredSkills",
+        "imageUrl",
+        "categoryImageUrl",
+        "isStartingPrice",
+        "status",
+        "isActive",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "AdminUser": {
+      "title": "AdminUser",
+      "description": "Authorized administrator identity document granting catalog write access.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "maxLength": 200
+        },
+        "role": {
+          "type": "string",
+          "enum": ["admin", "super_admin"]
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["uid", "email", "role", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/service_categories/{categoryId}": {
+      "schema": {
+        "$ref": "#/entities/ServiceCategory"
+      },
+      "description": "Active and archived marketplace consulting categories initialized with professional image placeholders."
+    },
+    "/services/{serviceId}": {
+      "schema": {
+        "$ref": "#/entities/ServiceItem"
+      },
+      "description": "Marketplace consulting service listings referencing an existing ServiceCategory document."
+    },
+    "/admins/{adminId}": {
+      "schema": {
+        "$ref": "#/entities/AdminUser"
+      },
+      "description": "Authorized platform administrators permitted to initialize and update catalog records."
+    }
+  }
+}
